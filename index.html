@@ -708,7 +708,17 @@ textarea.fi{resize:vertical;min-height:80px}
     <!-- ATTENDANCE MODULE (all staff) -->
     <div id="mod-attendance" class="mod">
       <div class="mhdr"><h2><i class="fa fa-clock" style="color:var(--P)"></i> My Attendance</h2></div>
-      <!-- Shift Info Card -->
+
+      <!-- DEPARTMENT SHIFT SCHEDULE PANEL -->
+      <div id="deptShiftPanel" class="sc-mb" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h4 style="font-size:.93rem"><i class="fa fa-calendar-week" style="color:var(--P)"></i> <span id="deptShiftTitle">Department Shifts</span></h4>
+          <span id="deptShiftDept" style="font-size:.75rem;background:var(--PL);color:var(--P);padding:3px 10px;border-radius:20px;font-weight:600"></span>
+        </div>
+        <div id="deptShiftList"></div>
+      </div>
+
+      <!-- MY ASSIGNED SHIFT CARD -->
       <div id="shiftInfoCard" style="display:none" class="shift-card">
         <div class="shift-icon"><i class="fa fa-calendar-day"></i></div>
         <div class="shift-info">
@@ -717,8 +727,16 @@ textarea.fi{resize:vertical;min-height:80px}
         </div>
         <span id="shiftStatusBadge" class="shift-badge shift-ok">On Shift</span>
       </div>
+
+      <!-- NO SHIFT ASSIGNED WARNING -->
+      <div id="noShiftWarning" style="display:none;background:#fff8e1;border:1px solid var(--W);border-radius:var(--rs);padding:11px 14px;font-size:.83rem;color:#7a5e00;margin-bottom:12px;display:none">
+        <i class="fa fa-triangle-exclamation" style="margin-right:6px"></i>
+        No shift assigned to your profile. Contact Admin to assign your shift.
+      </div>
+
       <div id="shiftAlertBox"></div>
-      <!-- Clock In/Out Card -->
+
+      <!-- CLOCK IN/OUT CARD -->
       <div class="sc-mb" id="clockCard">
         <h4 class="ssub">⏱ Today's Clock</h4>
         <div id="clockStatus" style="text-align:center;padding:10px 0;font-size:.85rem;color:var(--mu)">Checking status…</div>
@@ -2253,39 +2271,130 @@ window.loadAllAttendance=async()=>{
   const snap=await getDocs(query(collection(db,"attendance"),where("date","==",dateVal)));
   if(snap.empty){el.innerHTML='<div class="en">No attendance records for this date</div>';return;}
   const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
-  rows.sort((a,b)=>(a.staffName||"").localeCompare(b.staffName||""));
-  el.innerHTML=`<table class="dtab"><thead><tr><th>Staff</th><th>Role</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th>GPS</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr>
-      <td><b>${r.staffName}</b></td>
-      <td style="font-size:.75rem">${r.role||"—"}</td>
-      <td>${r.clockIn||"—"}</td>
-      <td>${r.clockOut||"—"}</td>
-      <td>${r.hoursWorked?r.hoursWorked.toFixed(1)+"h":"—"}</td>
-      <td><span class="att-status-${(r.status||"absent").toLowerCase()}">${r.status||"Absent"}</span></td>
-      <td style="font-size:.7rem;color:var(--mu)">${r.lat?`${Number(r.lat).toFixed(4)},${Number(r.lng).toFixed(4)}`:"—"}</td>
-    </tr>`).join("")+`</tbody></table>`;
+  rows.sort((a,b)=>(a.dept||"").localeCompare(b.dept||""));
+  // Group by dept for better readability
+  const byDept={};
+  rows.forEach(r=>{const d=r.dept||"General";if(!byDept[d])byDept[d]=[];byDept[d].push(r);});
+  let html='';
+  Object.entries(byDept).forEach(([dept,dRows])=>{
+    html+=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--P);padding:8px 0 4px;margin-top:4px">${dept}</div>`;
+    html+=`<table class="dtab" style="margin-bottom:12px"><thead><tr><th>Staff</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th><th>GPS</th></tr></thead><tbody>`;
+    dRows.forEach(r=>{
+      const shiftLabel=r.shiftLabel||(r.shift?r.shift.charAt(0).toUpperCase()+r.shift.slice(1):"—");
+      html+=`<tr>
+        <td><b>${r.staffName}</b><br><small style="color:var(--mu);font-size:.72rem">${r.role||""}</small></td>
+        <td><span style="font-size:.72rem;font-weight:600;background:var(--PL);color:var(--P);padding:2px 7px;border-radius:20px">${shiftLabel}</span></td>
+        <td>${r.clockIn||"—"}</td>
+        <td>${r.clockOut||"—"}</td>
+        <td>${r.hoursWorked?r.hoursWorked.toFixed(1)+"h":"—"}</td>
+        <td><span class="att-status-${(r.status||"absent").toLowerCase()}">${r.status||"Absent"}</span></td>
+        <td style="font-size:.7rem;color:var(--mu)">${r.lat?`${Number(r.lat).toFixed(4)},${Number(r.lng).toFixed(4)}`:"—"}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table>`;
+  });
+  el.innerHTML=html;
 };
 
 // ─── ATTENDANCE MODULE ──────────────────────────────────────────────────────
+// ─── HELPER: format mins to 12hr time ──────────────────────────────────────
+function fmtMins(m){
+  const h=Math.floor(((m%1440)+1440)%1440/60);
+  const min=((m%1440)+1440)%1440%60;
+  const ampm=h>=12?"pm":"am";
+  const h12=h%12||12;
+  return`${h12}:${String(min).padStart(2,"0")}${ampm}`;
+}
+
+// ─── BUILD DEPT SHIFT TABLE ──────────────────────────────────────────────────
+function buildDeptShiftTable(deptKey, deptRules, assignedShift){
+  const now=new Date();
+  const cur=now.getHours()*60+now.getMinutes();
+  const rows=Object.entries(deptRules).map(([key,shift])=>{
+    const {label,start,end}=shift;
+    // Check if currently active
+    let active=false;
+    if(end<start){ // overnight
+      active=cur>=start||cur<end;
+    } else {
+      active=cur>=start&&cur<end;
+    }
+    const isAssigned=assignedShift&&assignedShift.toLowerCase()===key.toLowerCase();
+    const activeBadge=active
+      ?`<span style="background:#e6f7ef;color:#1a7a4a;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px">● Active Now</span>`
+      :`<span style="background:var(--bg);color:var(--mu);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px">Inactive</span>`;
+    const assignBadge=isAssigned
+      ?`<span style="background:var(--P);color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:5px">My Shift</span>`:"";
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:${active?"#f0f7ff":isAssigned?"#f8fff8":"var(--bg)"};border-radius:var(--rs);margin-bottom:7px;border:1px solid ${active?"var(--P)":isAssigned?"var(--A)":"var(--brd)"}">
+      <div>
+        <div style="font-weight:600;font-size:.88rem">${label} Shift ${assignBadge}</div>
+        <div style="font-size:.78rem;color:var(--mu);margin-top:2px"><i class="fa fa-clock" style="margin-right:4px"></i>${fmtMins(start)} – ${fmtMins(end)}</div>
+      </div>
+      <div>${activeBadge}</div>
+    </div>`;
+  }).join("");
+  return rows||'<div class="en">No shifts defined</div>';
+}
+
 window.loadAttendanceModule=async()=>{
-  // Show shift info card
-  const shiftDef=getStaffShiftDef();
-  const card=ge("shiftInfoCard"),nameEl=ge("shiftName"),timeEl=ge("shiftTime"),badge=ge("shiftStatusBadge");
   const alertBox=ge("shiftAlertBox");if(alertBox)alertBox.innerHTML="";
+
+  // ── Build dept shift schedule panel ──
+  const dept=(SP.dept||"").trim();
+  const deptPanel=ge("deptShiftPanel");
+  const deptTitle=ge("deptShiftTitle");
+  const deptLabel=ge("deptShiftDept");
+  const deptList=ge("deptShiftList");
+
+  // Find matching dept rules
+  let matchedKey=null,deptRules=null;
+  if(SHIFT_RULES[dept]){
+    matchedKey=dept;deptRules=SHIFT_RULES[dept];
+  } else {
+    matchedKey=Object.keys(SHIFT_RULES).find(k=>dept.toLowerCase().includes(k.toLowerCase())||k.toLowerCase().includes(dept.toLowerCase()));
+    if(matchedKey)deptRules=SHIFT_RULES[matchedKey];
+  }
+
+  if(deptRules&&deptPanel){
+    deptPanel.style.display="block";
+    if(deptTitle)deptTitle.textContent=`${matchedKey} Shift Schedule`;
+    if(deptLabel)deptLabel.textContent=dept||matchedKey;
+    if(deptList)deptList.innerHTML=buildDeptShiftTable(matchedKey,deptRules,SP.shift||"");
+  } else if(deptPanel){
+    deptPanel.style.display="block";
+    if(deptTitle)deptTitle.textContent="Shift Schedule";
+    if(deptLabel)deptLabel.textContent=dept||"General";
+    if(deptList)deptList.innerHTML=`<div style="background:var(--bg);border-radius:var(--rs);padding:12px;font-size:.83rem;color:var(--mu);text-align:center"><i class="fa fa-circle-info" style="margin-right:6px"></i>No fixed shift schedule for this department. Standard hours apply.</div>`;
+  }
+
+  // ── My assigned shift card ──
+  const shiftDef=getStaffShiftDef();
+  const card=ge("shiftInfoCard");
+  const nameEl=ge("shiftName");
+  const timeEl=ge("shiftTime");
+  const badge=ge("shiftStatusBadge");
+  const noShiftWarn=ge("noShiftWarning");
+
+  if(!SP.shift&&noShiftWarn){
+    noShiftWarn.style.display="block";
+  } else if(noShiftWarn){
+    noShiftWarn.style.display="none";
+  }
+
   if(shiftDef&&card){
     card.style.display="flex";
-    const shiftKey=(SP.shift||"morning");
-    if(nameEl)nameEl.textContent=`${shiftDef.label} Shift — ${SP.dept||SP.role}`;
-    const sH=Math.floor(shiftDef.start/60),sM=shiftDef.start%60,eH=Math.floor(shiftDef.end/60),eM=shiftDef.end%60;
-    if(timeEl)timeEl.textContent=`${String(sH).padStart(2,"0")}:${String(sM).padStart(2,"0")} – ${String(eH).padStart(2,"0")}:${String(eM).padStart(2,"0")}`;
-    // Status badge
+    if(nameEl)nameEl.textContent=`My Shift: ${shiftDef.label} — ${dept||SP.role}`;
+    if(timeEl)timeEl.textContent=`${fmtMins(shiftDef.start)} – ${fmtMins(shiftDef.end)}`;
     const v=validateShiftClockIn();
     if(badge){
       if(!v.allowed){badge.textContent="Out of Shift";badge.className="shift-badge shift-block";}
       else if(v.status==="Late"){badge.textContent="Late Window";badge.className="shift-badge shift-warn";}
-      else{badge.textContent="On Shift";badge.className="shift-badge shift-ok";}
+      else{badge.textContent="✓ On Shift";badge.className="shift-badge shift-ok";}
     }
-  } else if(card){card.style.display="none";}
+  } else if(card){
+    card.style.display="none";
+  }
+
   await checkTodayAttendance();
   loadMyAttendance();
   populateMonthSelects();
