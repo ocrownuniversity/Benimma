@@ -545,7 +545,7 @@ textarea.fi{resize:vertical;min-height:80px}
         <div class="scard"><div class="iw io"><i class="fa fa-calendar-day"></i></div><div class="sv2" id="aTodP">—</div><div class="sl">New Today</div></div>
         <div class="scard"><div class="iw ip"><i class="fa fa-id-badge"></i></div><div class="sv2" id="aStaff">—</div><div class="sl">Staff Count</div></div>
       </div>
-      <div class="sc-mb"><h4 class="ssub">💰 Revenue Breakdown</h4>
+      <div id="adminRevenueSection" class="sc-mb"><h4 class="ssub">💰 Revenue Breakdown</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:8px">
           <div style="text-align:center;background:var(--bg);border-radius:9px;padding:12px"><div style="font-size:1rem;font-weight:700;color:var(--P)" id="aCash">—</div><div style="font-size:.72rem;color:var(--mu)">Cash</div></div>
           <div style="text-align:center;background:var(--bg);border-radius:9px;padding:12px"><div style="font-size:1rem;font-weight:700;color:var(--A)" id="aPOS">—</div><div style="font-size:.72rem;color:var(--mu)">POS</div></div>
@@ -554,7 +554,7 @@ textarea.fi{resize:vertical;min-height:80px}
       </div>
       <div class="sc-mb">
         <div class="mhdr" style="margin-bottom:10px"><h4 style="font-size:.93rem">👥 All Staff</h4><button class="bsm outline" onclick="loadStaff()"><i class="fa fa-rotate"></i></button></div>
-        <div class="twrap"><table class="dtab"><thead><tr><th>Name</th><th>Role</th><th>Salary</th><th>Status</th><th>Actions</th></tr></thead><tbody id="staffBody"></tbody></table></div>
+        <div class="twrap"><table class="dtab"><thead><tr><th>Name</th><th>Role</th><th>Shift</th><th>Status</th><th>Actions</th></tr></thead><tbody id="staffBody"></tbody></table></div>
       </div>
     </div>
 
@@ -973,8 +973,8 @@ textarea.fi{resize:vertical;min-height:80px}
   <div class="fg"><label class="fl">Full Name</label><input id="esName" class="fi"/></div>
   <div class="fg"><label class="fl">Role</label>
     <select id="esRole" class="fsel">
-      <option>Admin</option><option>Super Admin</option><option>Doctor</option><option>Nurse</option>
-      <option>Receptionist</option><option>Lab Technician</option><option>Pharmacist</option><option>Accountant</option>
+      <option>Admin</option><option>Super Admin</option><option>Assistant Admin</option><option>Doctor</option><option>Nurse</option>
+      <option>Receptionist</option><option>Lab Technician</option><option>Chief Lab Technician</option><option>Pharmacist</option><option>Accountant</option>
     </select>
   </div>
   <div class="fg"><label class="fl">Department</label><input id="esDept" class="fi"/></div>
@@ -1008,7 +1008,7 @@ textarea.fi{resize:vertical;min-height:80px}
   <div class="fg"><label class="fl">Full Name *</label><input id="sName" class="fi" placeholder="Staff full name"/></div>
   <div class="fg"><label class="fl">Email *</label><input id="sEmail" class="fi" type="email" placeholder="staff@hospital.org"/></div>
   <div class="fg"><label class="fl">Password *</label><input id="sPass" class="fi" type="password" placeholder="Min 6 characters"/></div>
-  <div class="frow"><div class="fg"><label class="fl">Role *</label><select id="sRole" class="fsel"><option value="">Select…</option><option>Admin</option><option>Super Admin</option><option>Doctor</option><option>Nurse</option><option>Receptionist</option><option>Lab Technician</option><option>Pharmacist</option><option>Accountant</option></select></div><div class="fg"><label class="fl">Department</label><input id="sDept" class="fi" placeholder="e.g. Nursing"/></div></div>
+  <div class="frow"><div class="fg"><label class="fl">Role *</label><select id="sRole" class="fsel"><option value="">Select…</option><option>Admin</option><option>Super Admin</option><option>Assistant Admin</option><option>Doctor</option><option>Nurse</option><option>Receptionist</option><option>Lab Technician</option><option>Chief Lab Technician</option><option>Pharmacist</option><option>Accountant</option></select></div><div class="fg"><label class="fl">Department</label><input id="sDept" class="fi" placeholder="e.g. Nursing"/></div></div>
   <div class="fg"><label class="fl">Assigned Shift</label>
     <select id="sShift" class="fsel">
       <option value="">Select shift…</option>
@@ -1065,6 +1065,13 @@ const ADMIN_EMAILS=["oladejiridwanopeyemi@gmail.com","admin@lovinghearthospital.
 // We also check Firestore role = "Admin"
 
 function isAdmin(){
+  if(!CU||!SP)return false;
+  if(SP.role==="Admin"||SP.role==="Super Admin"||SP.role==="Assistant Admin")return true;
+  if(CU.email&&ADMIN_EMAILS.includes(CU.email.toLowerCase()))return true;
+  return false;
+}
+function isFullAdmin(){
+  // Full admin only — excludes Assistant Admin
   if(!CU||!SP)return false;
   if(SP.role==="Admin"||SP.role==="Super Admin")return true;
   if(CU.email&&ADMIN_EMAILS.includes(CU.email.toLowerCase()))return true;
@@ -1129,26 +1136,32 @@ window.doLogout=async()=>{await signOut(auth);toast("Logged out","ok");};
 
 // ── STRICT ROLE PERMISSIONS ────────────────────────────────────────────────
 const ROLE_MODULES={
-  "Super Admin":    ["dashboard","patients","appointments","lab","pharmacy","billing","messages","profile","admin","payroll","accountant","attendance","notifications"],
-  "Admin":          ["dashboard","patients","appointments","lab","pharmacy","billing","messages","profile","admin","payroll","accountant","attendance","notifications"],
-  "Doctor":         ["dashboard","patients","appointments","messages","profile","attendance","notifications"],
-  "Nurse":          ["dashboard","patients","appointments","messages","profile","attendance","notifications"],
-  "Receptionist":   ["dashboard","patients","appointments","billing","messages","profile","attendance","notifications"],
-  "Lab Technician": ["dashboard","lab","patients","messages","profile","attendance","notifications"],
-  "Pharmacist":     ["dashboard","pharmacy","patients","messages","profile","attendance","notifications"],
-  "Accountant":     ["dashboard","payroll","accountant","messages","profile","attendance","notifications"]
+  "Super Admin":       ["dashboard","patients","appointments","lab","pharmacy","billing","messages","profile","admin","payroll","accountant","attendance","notifications"],
+  "Admin":             ["dashboard","patients","appointments","lab","pharmacy","billing","messages","profile","admin","payroll","accountant","attendance","notifications"],
+  "Assistant Admin":   ["dashboard","patients","appointments","lab","pharmacy","billing","messages","profile","admin","attendance","notifications"],
+  "Doctor":            ["dashboard","patients","appointments","messages","profile","attendance","notifications"],
+  "Nurse":             ["dashboard","patients","appointments","messages","profile","attendance","notifications"],
+  "Receptionist":      ["dashboard","patients","appointments","billing","messages","profile","attendance","notifications"],
+  "Lab Technician":    ["dashboard","lab","patients","messages","profile","attendance","notifications"],
+  "Chief Lab Technician":["dashboard","lab","patients","messages","profile","attendance","notifications"],
+  "Pharmacist":        ["dashboard","pharmacy","patients","messages","profile","attendance","notifications"],
+  "Accountant":        ["dashboard","payroll","accountant","messages","profile","attendance","notifications"]
 };
 const ROLE_ACTIONS={
-  "Super Admin":    ["register","dispense","uploadLab","manageStock","viewPatient","book","bill","addRecord","viewRecord","managePayroll","manageStaff"],
-  "Admin":          ["register","dispense","uploadLab","manageStock","viewPatient","book","bill","addRecord","viewRecord","managePayroll","manageStaff"],
-  "Doctor":         ["viewPatient","addRecord","viewRecord","book"],
-  "Nurse":          ["register","viewPatient","addRecord","viewRecord","book"],
-  "Receptionist":   ["register","viewPatient","book","bill","viewRecord"],
-  "Lab Technician": ["uploadLab","viewPatient","viewRecord"],
-  "Pharmacist":     ["dispense","manageStock","viewPatient","viewRecord"],
-  "Accountant":     ["managePayroll","viewRecord"]
+  "Super Admin":       ["register","dispense","uploadLab","manageStock","viewPatient","book","bill","addRecord","viewRecord","managePayroll","manageStaff","deleteStock","approveDispense","approveLab","viewRevenue"],
+  "Admin":             ["register","dispense","uploadLab","manageStock","viewPatient","book","bill","addRecord","viewRecord","managePayroll","manageStaff","deleteStock","approveDispense","approveLab","viewRevenue"],
+  "Assistant Admin":   ["register","dispense","uploadLab","manageStock","viewPatient","book","bill","addRecord","viewRecord","manageStaff","deleteStock"],
+  "Doctor":            ["viewPatient","addRecord","viewRecord","book"],
+  "Nurse":             ["register","viewPatient","addRecord","viewRecord","book"],
+  "Receptionist":      ["register","viewPatient","book","bill","viewRecord"],
+  "Lab Technician":    ["uploadLab","viewPatient","viewRecord"],
+  "Chief Lab Technician":["uploadLab","viewPatient","viewRecord","approveLabResult","manageLabStaff"],
+  "Pharmacist":        ["dispense","manageStock","deleteStock","viewPatient","viewRecord"],
+  "Accountant":        ["managePayroll","viewRecord"]
 };
 function canDo(action){return(ROLE_ACTIONS[SP.role]||[]).includes(action);}
+function isAssistantAdmin(){return SP&&(SP.role==="Assistant Admin");}
+function isChiefLabTech(){return SP&&(SP.role==="Chief Lab Technician");}
 
 function initApp(){
   sv("staffName",SP.name);
@@ -1340,12 +1353,15 @@ async function renderRec(){
 
   // What can this role add?
   const roleActions={
-    "Admin":         [{v:"vitals",l:"❤️ Vital Signs"},{v:"diag",l:"🩺 Diagnosis"},{v:"rx",l:"💊 Prescription"},{v:"labReq",l:"🔬 Lab Request"},{v:"labRes",l:"🧪 Lab Result"},{v:"note",l:"👩‍⚕️ Note"},{v:"referral",l:"📨 Note to Dept"}],
-    "Doctor":        [{v:"diag",l:"🩺 Diagnosis"},{v:"rx",l:"💊 Prescription → Pharmacy"},{v:"labReq",l:"🔬 Lab Request → Lab"},{v:"vitals",l:"❤️ Vital Signs"},{v:"referral",l:"📨 Note to Dept"}],
-    "Nurse":         [{v:"vitals",l:"❤️ Vital Signs"},{v:"note",l:"👩‍⚕️ Nurse Note"},{v:"labReq",l:"🔬 Lab Request → Lab"},{v:"referral",l:"📨 Note to Dept"}],
-    "Lab Technician":[{v:"labRes",l:"🧪 Upload Lab Result"}],
-    "Pharmacist":    [],
-    "Receptionist":  []
+    "Admin":              [{v:"vitals",l:"❤️ Vital Signs"},{v:"injection",l:"💉 Injection"},{v:"diag",l:"🩺 Diagnosis"},{v:"rx",l:"💊 Prescription"},{v:"labReq",l:"🔬 Lab Request"},{v:"labRes",l:"🧪 Lab Result"},{v:"note",l:"👩‍⚕️ Note"},{v:"referral",l:"📨 Note to Dept"}],
+    "Super Admin":        [{v:"vitals",l:"❤️ Vital Signs"},{v:"injection",l:"💉 Injection"},{v:"diag",l:"🩺 Diagnosis"},{v:"rx",l:"💊 Prescription"},{v:"labReq",l:"🔬 Lab Request"},{v:"labRes",l:"🧪 Lab Result"},{v:"note",l:"👩‍⚕️ Note"},{v:"referral",l:"📨 Note to Dept"}],
+    "Assistant Admin":    [{v:"vitals",l:"❤️ Vital Signs"},{v:"injection",l:"💉 Injection"},{v:"diag",l:"🩺 Diagnosis"},{v:"rx",l:"💊 Prescription"},{v:"labReq",l:"🔬 Lab Request"},{v:"labRes",l:"🧪 Lab Result"},{v:"note",l:"👩‍⚕️ Note"},{v:"referral",l:"📨 Note to Dept"}],
+    "Doctor":             [{v:"diag",l:"🩺 Diagnosis"},{v:"injection",l:"💉 Injection"},{v:"rx",l:"💊 Prescription → Pharmacy"},{v:"labReq",l:"🔬 Lab Request → Lab"},{v:"vitals",l:"❤️ Vital Signs"},{v:"referral",l:"📨 Note to Dept"}],
+    "Nurse":              [{v:"vitals",l:"❤️ Vital Signs"},{v:"injection",l:"💉 Injection"},{v:"note",l:"👩‍⚕️ Nurse Note"},{v:"labReq",l:"🔬 Lab Request → Lab"},{v:"referral",l:"📨 Note to Dept"}],
+    "Lab Technician":     [{v:"labRes",l:"🧪 Upload Lab Result"}],
+    "Chief Lab Technician":[{v:"labRes",l:"🧪 Upload Lab Result"}],
+    "Pharmacist":         [],
+    "Receptionist":       []
   };
   const acts=roleActions[SP.role]||[];
   const addBtns=acts.length>0?`<div class="flex" style="flex-wrap:wrap;gap:7px;margin-top:12px">${acts.map(a=>`<button class="bsm outline" style="font-size:.76rem;padding:6px 10px" onclick="openAddRec('${a.v}','${a.l}')">${a.l}</button>`).join("")}</div>`:"";
@@ -1361,8 +1377,8 @@ async function renderRec(){
     <div class="di full"><span>Medical History / Allergies</span><strong>${p.history||"None stated"}</strong></div>
   </div>${addBtns}`;
 
-  const colorMap={reg:"reg",vitals:"vitals",diag:"doctor",rx:"pharmacy",labReq:"lab",labRes:"lab",note:"nurse",referral:"doctor"};
-  const tagMap={reg:"📋 Registration",vitals:"❤️ Vitals",diag:"🩺 Diagnosis",rx:"💊 Prescription",labReq:"🔬 Lab Request",labRes:"🧪 Lab Result",note:"👩‍⚕️ Nurse Note",referral:"📨 Dept Note"};
+  const colorMap={reg:"reg",vitals:"vitals",diag:"doctor",rx:"pharmacy",labReq:"lab",labRes:"lab",note:"nurse",referral:"doctor",injection:"nurse"};
+  const tagMap={reg:"📋 Registration",vitals:"❤️ Vitals",diag:"🩺 Diagnosis",rx:"💊 Prescription",labReq:"🔬 Lab Request",labRes:"🧪 Lab Result",note:"👩‍⚕️ Nurse Note",referral:"📨 Dept Note",injection:"💉 Injection"};
 
   let tl="";
   if(!recs.length){
@@ -1376,11 +1392,23 @@ async function renderRec(){
         body=`<div class="vgrid">${[
           v.bp?`<div class="vcard"><div class="vval">${v.bp}</div><div class="vlbl">Blood Pressure</div></div>`:"",
           v.temp?`<div class="vcard"><div class="vval">${v.temp}</div><div class="vlbl">Temperature</div></div>`:"",
-          v.pulse?`<div class="vcard"><div class="vval">${v.pulse}</div><div class="vlbl">Pulse</div></div>`:"",
+          v.pulse?`<div class="vcard"><div class="vval">${v.pulse}</div><div class="vlbl">Pulse Rate</div></div>`:"",
+          v.resp?`<div class="vcard"><div class="vval">${v.resp}</div><div class="vlbl">Respiratory Rate</div></div>`:"",
           v.weight?`<div class="vcard"><div class="vval">${v.weight}</div><div class="vlbl">Weight</div></div>`:"",
           v.height?`<div class="vcard"><div class="vval">${v.height}</div><div class="vlbl">Height</div></div>`:"",
           v.o2?`<div class="vcard"><div class="vval">${v.o2}</div><div class="vlbl">SpO₂</div></div>`:""
         ].join("")}</div>${r.body?`<p style="font-size:.83rem;margin-top:6px;color:var(--mu)">${r.body}</p>`:""}`;
+      }
+      if(r.type==="injection"&&r.injection){
+        const inj=r.injection;
+        body=`<div class="vgrid" style="grid-template-columns:1fr 1fr">${[
+          inj.name?`<div class="vcard"><div class="vval" style="font-size:.88rem">${inj.name}</div><div class="vlbl">Drug</div></div>`:"",
+          inj.dose?`<div class="vcard"><div class="vval" style="font-size:.88rem">${inj.dose}</div><div class="vlbl">Dosage</div></div>`:"",
+          inj.route?`<div class="vcard"><div class="vval" style="font-size:.82rem">${inj.route}</div><div class="vlbl">Route</div></div>`:"",
+          inj.days?`<div class="vcard"><div class="vval">${inj.days}</div><div class="vlbl">Days</div></div>`:"",
+          inj.start?`<div class="vcard"><div class="vval" style="font-size:.82rem">${inj.start}</div><div class="vlbl">Start Date</div></div>`:"",
+          inj.end?`<div class="vcard"><div class="vval" style="font-size:.82rem">${inj.end}</div><div class="vlbl">End Date</div></div>`:""
+        ].join("")}</div>${inj.notes?`<p style="font-size:.83rem;margin-top:6px;color:var(--mu)">${inj.notes}</p>`:""}`;
       }
       return`<div class="rec-block ${cls}">
         <div class="rec-dot dot-${cls}"></div>
@@ -1405,10 +1433,17 @@ window.openAddRec=async(type,label)=>{
   ge("addRecTitle").innerHTML=`<i class="fa fa-pen-to-square" style="color:var(--P)"></i> ${label}`;
   const forms={
     vitals:`<div class="frow"><div class="fg"><label class="fl">Blood Pressure</label><input id="vBP" class="fi" placeholder="e.g. 120/80 mmHg"/></div><div class="fg"><label class="fl">Temperature</label><input id="vTemp" class="fi" placeholder="e.g. 36.6 °C"/></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Pulse</label><input id="vPulse" class="fi" placeholder="e.g. 72 bpm"/></div><div class="fg"><label class="fl">Weight</label><input id="vWeight" class="fi" placeholder="e.g. 70 kg"/></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Height</label><input id="vHeight" class="fi" placeholder="e.g. 170 cm"/></div><div class="fg"><label class="fl">SpO₂</label><input id="vO2" class="fi" placeholder="e.g. 98%"/></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Pulse Rate</label><input id="vPulse" class="fi" placeholder="e.g. 72 bpm"/></div><div class="fg"><label class="fl">Respiratory Rate</label><input id="vResp" class="fi" placeholder="e.g. 18 breaths/min"/></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Weight</label><input id="vWeight" class="fi" placeholder="e.g. 70 kg"/></div><div class="fg"><label class="fl">Height</label><input id="vHeight" class="fi" placeholder="e.g. 170 cm"/></div></div>
+      <div class="frow"><div class="fg"><label class="fl">SpO₂</label><input id="vO2" class="fi" placeholder="e.g. 98%"/></div><div class="fg"></div></div>
       <div class="fg"><label class="fl">Notes</label><textarea id="vNotes" class="fi" placeholder="Additional observations…"></textarea></div>
       <button class="btnP" onclick="saveRec('vitals')"><i class="fa fa-save"></i> Save Vitals</button>`,
+    injection:`<div style="background:#ede7f6;border-radius:var(--rs);padding:10px;font-size:.82rem;color:#5e35b1;margin-bottom:12px"><i class="fa fa-syringe"></i> Injection records will appear in the patient's medical timeline.</div>
+      <div class="frow"><div class="fg"><label class="fl">Injection Name *</label><input id="injName" class="fi" placeholder="e.g. Gentamicin, Ceftriaxone"/></div><div class="fg"><label class="fl">Dosage *</label><input id="injDose" class="fi" placeholder="e.g. 80mg, 1g"/></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Route *</label><select id="injRoute" class="fsel"><option value="">Select route…</option><option>IM (Intramuscular)</option><option>IV (Intravenous)</option><option>SC (Subcutaneous)</option></select></div><div class="fg"><label class="fl">Days of Injection</label><input id="injDays" class="fi" type="number" placeholder="e.g. 5" min="1"/></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Start Date *</label><input id="injStart" class="fi" type="date"/></div><div class="fg"><label class="fl">End Date</label><input id="injEnd" class="fi" type="date"/></div></div>
+      <div class="fg"><label class="fl">Additional Notes</label><textarea id="injNotes" class="fi" placeholder="Frequency, special instructions…"></textarea></div>
+      <button class="btnP" onclick="saveRec('injection')"><i class="fa fa-syringe"></i> Save Injection Record</button>`,
     diag:`<div class="fg"><label class="fl">Diagnosis / Clinical Notes</label><textarea id="diagNote" class="fi" style="min-height:100px" placeholder="Full diagnosis and clinical findings…"></textarea></div>
       <button class="btnP" onclick="saveRec('diag')"><i class="fa fa-save"></i> Save Diagnosis</button>`,
     rx:`<div style="background:#fff8e1;border-radius:var(--rs);padding:10px;font-size:.82rem;color:#7a5e00;margin-bottom:12px"><i class="fa fa-circle-info"></i> This prescription will appear in the <b>Pharmacy module</b> for dispensing.</div>
@@ -1437,16 +1472,22 @@ window.openAddRec=async(type,label)=>{
 window.saveRec=async(type)=>{
   if(!aPID){toast("No patient selected","err");return;}
   if(!canDo("addRecord")){toast("⛔ Your role cannot add records","err");return;}
-  // Extra strict checks per type
-  if(type==="rx"&&!["Doctor","Admin"].includes(SP.role)){toast("⛔ Only Doctors can prescribe medications","err");return;}
+  if(type==="rx"&&!["Doctor","Admin","Super Admin","Assistant Admin"].includes(SP.role)){toast("⛔ Only Doctors can prescribe medications","err");return;}
   if(type==="labRes"&&!canDo("uploadLab")){toast("⛔ Only Lab Technicians can upload lab results","err");return;}
-  if(type==="labReq"&&!["Doctor","Nurse","Admin"].includes(SP.role)){toast("⛔ Only Doctors and Nurses can request lab tests","err");return;}
-  if(type==="diag"&&!["Doctor","Admin"].includes(SP.role)){toast("⛔ Only Doctors can add diagnoses","err");return;}
+  if(type==="labReq"&&!["Doctor","Nurse","Admin","Super Admin","Assistant Admin"].includes(SP.role)){toast("⛔ Only Doctors and Nurses can request lab tests","err");return;}
+  if(type==="diag"&&!["Doctor","Admin","Super Admin","Assistant Admin"].includes(SP.role)){toast("⛔ Only Doctors can add diagnoses","err");return;}
   let rd={pid:aPID,type,by:SP.name,byRole:SP.role,ts:serverTimestamp()};
   if(type==="vitals"){
-    const bp=gv("vBP"),temp=gv("vTemp"),pulse=gv("vPulse"),weight=gv("vWeight"),height=gv("vHeight"),o2=gv("vO2"),notes=gv("vNotes");
-    if(!bp&&!temp&&!pulse){toast("Enter at least one vital","err");return;}
-    rd={...rd,tag:"Vital Signs",role:"vitals",vitals:{bp,temp,pulse,weight,height,o2},body:notes};
+    const bp=gv("vBP"),temp=gv("vTemp"),pulse=gv("vPulse"),resp=gv("vResp"),weight=gv("vWeight"),height=gv("vHeight"),o2=gv("vO2"),notes=gv("vNotes");
+    if(!bp&&!temp&&!pulse&&!resp){toast("Enter at least one vital","err");return;}
+    rd={...rd,tag:"Vital Signs",role:"vitals",vitals:{bp,temp,pulse,resp,weight,height,o2},body:notes};
+  }else if(type==="injection"){
+    const name=gv("injName"),dose=gv("injDose"),route=gv("injRoute"),days=gv("injDays"),start=gv("injStart"),end=gv("injEnd"),notes=gv("injNotes");
+    if(!name||!dose||!route){toast("Enter injection name, dosage and route","err");return;}
+    rd={...rd,tag:"Injection",role:"nurse",
+      body:`💉 ${name} — ${dose} | Route: ${route}${days?" | "+days+" day(s)":""}${start?"\nStart: "+start:""}${end?" | End: "+end:""}${notes?"\n"+notes:""}`,
+      injection:{name,dose,route,days,start,end,notes}};
+    await sendNotif(["Nurse","Admin","Doctor"],"note","💉 Injection Recorded",`${SP.name} recorded ${name} (${dose}, ${route}) for patient ${aPID}`,aPID);
   }else if(type==="diag"){
     const n=gv("diagNote");if(!n){toast("Enter diagnosis","err");return;}
     await sendNotif(["Nurse","Admin"],"diag","🩺 Diagnosis Added",`Dr.${SP.name} added diagnosis for patient ${aPID}`,aPID);
@@ -1454,21 +1495,20 @@ window.saveRec=async(type)=>{
   }else if(type==="rx"){
     const drug=gv("rxDrug"),dose=gv("rxDose"),note=gv("rxNote");
     if(!drug||!dose){toast("Enter drug & dosage","err");return;}
-    // Also push to prescriptions collection so pharmacy can see it
-    await addDoc(collection(db,"prescriptions"),{patientId:aPID,drug,dosage:dose,instructions:note,prescribedBy:SP.name,dispensed:false,createdAt:serverTimestamp()});
-    await sendNotif(["Pharmacist","Admin"],"rx","💊 New Prescription",`Dr.${SP.name} prescribed ${drug} (${dose}) for patient ${aPID}`,aPID);
-    rd={...rd,tag:"Prescription",role:"pharmacy",body:`💊 ${drug} — ${dose}${note?" ("+note+")":""}\nSent to Pharmacy by Dr. ${SP.name}`};
+    // Push to prescriptions with adminApproved:false — requires admin approval before dispensing
+    await addDoc(collection(db,"prescriptions"),{patientId:aPID,drug,dosage:dose,instructions:note,prescribedBy:SP.name,dispensed:false,adminApproved:false,createdAt:serverTimestamp()});
+    await sendNotif(["Pharmacist","Admin"],"rx","💊 New Prescription — Awaiting Approval",`Dr.${SP.name} prescribed ${drug} (${dose}) for patient ${aPID}. Admin approval required before dispensing.`,aPID);
+    rd={...rd,tag:"Prescription",role:"pharmacy",body:`💊 ${drug} — ${dose}${note?" ("+note+")":""}\nSent to Pharmacy by Dr. ${SP.name}\n⏳ Awaiting Admin approval`};
   }else if(type==="labReq"){
     const test=gv("labTestIn"),urg=gv("labUrg"),notes=gv("labNotes");
     if(!test){toast("Enter test name","err");return;}
-    // Also push to labRequests so lab module shows it
-    await addDoc(collection(db,"labRequests"),{patientId:aPID,testName:test,urgency:urg,notes,requestedBy:SP.name,status:"Pending",createdAt:serverTimestamp()});
-    await sendNotif(["Lab Technician","Admin"],"labReq","🔬 New Lab Request",`${SP.name} requested ${test} [${urg}] for patient ${aPID}`,aPID);
-    rd={...rd,tag:"Lab Request",role:"lab",body:`🔬 ${test} [${urg}]\n${notes?notes+"\n":""}Sent to Lab by ${SP.name}`};
+    // Push to labRequests with adminApproved:false
+    await addDoc(collection(db,"labRequests"),{patientId:aPID,testName:test,urgency:urg,notes,requestedBy:SP.name,status:"Pending",adminApproved:false,createdAt:serverTimestamp()});
+    await sendNotif(["Lab Technician","Chief Lab Technician","Admin"],"labReq","🔬 Lab Request — Awaiting Approval",`${SP.name} requested ${test} [${urg}] for patient ${aPID}. Admin approval required.`,aPID);
+    rd={...rd,tag:"Lab Request",role:"lab",body:`🔬 ${test} [${urg}]\n${notes?notes+"\n":""}Sent to Lab by ${SP.name}\n⏳ Awaiting Admin approval`};
   }else if(type==="labRes"){
     const test=gv("lrTest"),res=gv("lrResult"),ref=gv("lrRef");
     if(!test||!res){toast("Enter test name and result","err");return;}
-    // Mark related request as completed
     const lrs=await getDocs(query(collection(db,"labRequests"),where("patientId","==",aPID),where("testName","==",test),where("status","==","Pending")));
     for(const d of lrs.docs)await updateDoc(doc(db,"labRequests",d.id),{status:"Completed"});
     await addDoc(collection(db,"labResults"),{patientId:aPID,testName:test,results:res,reference:ref,uploadedBy:SP.name,createdAt:serverTimestamp()});
@@ -1530,20 +1570,35 @@ window.loadLabQ=async()=>{
   if(s.empty){el.innerHTML='<div class="en">No pending lab requests</div>';return;}
   const rows=s.docs.map(d=>({_id:d.id,...d.data()}));
   rows.sort((a,b)=>{const order={STAT:0,Urgent:1,Routine:2};return(order[a.urgency]||2)-(order[b.urgency]||2);});
-  el.innerHTML=rows.map(r=>`<div class="icard">
-    <div class="crow">
-      <span><i class="fa fa-vial"></i> <b>${r.testName}</b>${r.urgency==="STAT"?` <span class="badge bg-no">STAT</span>`:r.urgency==="Urgent"?` <span class="badge bg-warn">Urgent</span>`:""}</span>
-      <span class="pid">${r.patientId}</span>
-    </div>
-    <small class="muted">Requested by ${r.requestedBy}${r.notes?" · "+r.notes:""}</small>
-    <div class="mt8">
-      <textarea id="lr-${r._id}" class="fi sm" style="min-height:60px" placeholder="Enter full result details here…"></textarea>
-      <div class="flex mt4">
-        <input id="lrref-${r._id}" class="fi sm" style="flex:1" placeholder="Reference range (optional)"/>
-        <button class="bsm primary" onclick="uploadLab('${r._id}','${r.patientId}','${r.testName}')"><i class="fa fa-upload"></i> Upload & Save to Patient File</button>
+  el.innerHTML=rows.map(r=>{
+    const approved=r.adminApproved===true;
+    const approvalBadge=approved
+      ?`<span style="background:#e6f7ef;color:#1a7a4a;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px">✅ Approved — Ready to Process</span>`
+      :`<span style="background:#fff8e1;color:#7a5e00;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px">⏳ Waiting for Admin Approval</span>`;
+    const approveBtn=canDo("approveLab")&&!approved
+      ?`<button class="bsm success mt4" onclick="approveLabRequest('${r._id}')"><i class="fa fa-check-circle"></i> Approve Lab Test</button><br>`:"";
+    const resultForm=approved
+      ?`<textarea id="lr-${r._id}" class="fi sm" style="min-height:60px;margin-top:8px" placeholder="Enter full result details here…"></textarea>
+        <div class="flex mt4">
+          <input id="lrref-${r._id}" class="fi sm" style="flex:1" placeholder="Reference range (optional)"/>
+          <button class="bsm primary" onclick="uploadLab('${r._id}','${r.patientId}','${r.testName}')"><i class="fa fa-upload"></i> Upload Result</button>
+        </div>`
+      :`<div style="font-size:.82rem;color:var(--mu);font-style:italic;margin-top:6px">Results can only be entered after Admin approval.</div>`;
+    return`<div class="icard">
+      <div class="crow">
+        <span><i class="fa fa-vial"></i> <b>${r.testName}</b>${r.urgency==="STAT"?` <span class="badge bg-no">STAT</span>`:r.urgency==="Urgent"?` <span class="badge bg-warn">Urgent</span>`:""}</span>
+        <span class="pid">${r.patientId}</span>
       </div>
-    </div>
-  </div>`).join("");
+      <small class="muted">Requested by ${r.requestedBy}${r.notes?" · "+r.notes:""}</small>
+      <div class="mt8">${approvalBadge}<br>${approveBtn}${resultForm}</div>
+    </div>`;
+  }).join("");
+};
+window.approveLabRequest=async(id)=>{
+  if(!canDo("approveLab")){toast("⛔ Admin only","err");return;}
+  await updateDoc(doc(db,"labRequests",id),{adminApproved:true,approvedBy:SP.name,approvedAt:serverTimestamp()});
+  toast("✅ Lab test approved — Lab Technician can now process","ok");
+  loadLabQ();
 };
 window.uploadLab=async(id,pid,test)=>{
   if(!canDo("uploadLab")){toast("⛔ Only Lab Technicians can upload results","err");return;}
@@ -1563,12 +1618,37 @@ window.loadRx=async()=>{
   const el=ge("pharmRx");if(!el)return;
   el.innerHTML='<div class="cr"><i class="fa fa-spinner fa-spin"></i></div>';
   const s=await getDocs(query(collection(db,"prescriptions"),where("dispensed","==",false)));
-  if(s.empty){el.innerHTML='<div class="en">No pending prescriptions from doctors</div>';return;}
-  el.innerHTML=s.docs.map(d=>{const r=d.data();return`<div class="icard">
-    <div class="crow"><span><i class="fa fa-pills"></i> <b>${r.drug}</b></span><span class="pid">${r.patientId}</span></div>
-    <small class="muted">${r.dosage}${r.instructions?" — "+r.instructions:""} · Prescribed by Dr.${r.prescribedBy}</small>
-    <button class="bsm success mt8" onclick="dispense('${d.id}','${r.drug}','${r.patientId}','${r.dosage}')"><i class="fa fa-check"></i> Mark Dispensed & Update Patient File</button>
-  </div>`;}).join("");
+  if(s.empty){el.innerHTML='<div class="en">No pending prescriptions</div>';return;}
+  el.innerHTML=s.docs.map(d=>{
+    const r=d.data(),id=d.id;
+    const approved=r.adminApproved===true;
+    const approvalBadge=approved
+      ?`<span style="background:#e6f7ef;color:#1a7a4a;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px">✅ Approved</span>`
+      :`<span style="background:#fff8e1;color:#7a5e00;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px">⏳ Awaiting Approval</span>`;
+    const approveBtn=canDo("approveDispense")&&!approved
+      ?`<button class="bsm success" onclick="approvePrescription('${id}')"><i class="fa fa-check-circle"></i> Approve</button>`:"";
+    const dispenseBtn=approved&&canDo("dispense")
+      ?`<button class="bsm primary" onclick="dispense('${id}','${r.drug}','${r.patientId}','${r.dosage}')"><i class="fa fa-pills"></i> Dispense</button>`
+      :`<button class="bsm outline" disabled style="opacity:.5;cursor:not-allowed"><i class="fa fa-clock"></i> Waiting for Admin Approval</button>`;
+    return`<div class="icard">
+      <div class="crow"><span><i class="fa fa-pills"></i> <b>${r.drug}</b></span><span class="pid">${r.patientId}</span></div>
+      <small class="muted">${r.dosage}${r.instructions?" — "+r.instructions:""} · Prescribed by Dr.${r.prescribedBy}</small>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${approvalBadge}${approveBtn}${dispenseBtn}</div>
+    </div>`;
+  }).join("");
+};
+window.approvePrescription=async(id)=>{
+  if(!canDo("approveDispense")){toast("⛔ Admin only","err");return;}
+  await updateDoc(doc(db,"prescriptions",id),{adminApproved:true,approvedBy:SP.name,approvedAt:serverTimestamp()});
+  toast("✅ Prescription approved — Pharmacist can now dispense","ok");
+  loadRx();
+};
+window.deleteDrugBatch=async(batchId,drugName)=>{
+  if(!canDo("deleteStock")){toast("⛔ Only Pharmacists or Admins can delete stock","err");return;}
+  if(!confirm(`Remove batch of "${drugName}" from stock? This cannot be undone.`)){return;}
+  await updateDoc(doc(db,"drugBatches",batchId),{active:false,deletedBy:SP.name,deletedAt:serverTimestamp()});
+  toast(`✅ Batch of ${drugName} removed from stock`,"ok");
+  loadStock();
 };
 window.dispense=async(id,drug,pid,dosage)=>{
   if(!canDo("dispense")){toast("⛔ Only Pharmacists can dispense drugs","err");return;}
@@ -1715,7 +1795,7 @@ window.loadStock=async()=>{
     return;
   }
 
-  let html='<table class="dtab"><thead><tr><th>Drug</th><th>Batch</th><th>Qty</th><th>Expiry</th><th>Status</th></tr></thead><tbody>';
+  let html='<table class="dtab"><thead><tr><th>Drug</th><th>Batch</th><th>Qty</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead><tbody>';
   Object.entries(byName).forEach(([name,batches])=>{
     batches.forEach(r=>{
       const qty=r.qty||0;
@@ -1745,6 +1825,7 @@ window.loadStock=async()=>{
         <td style="font-weight:700;color:${qty===0?"var(--D)":qty<=5?"var(--W)":"var(--tx)"}">${qty}</td>
         <td style="font-size:.78rem;color:${expiryColor||"var(--tx)"}">${expiryStr}</td>
         <td>${expiryStatus||`<span style="background:var(--bg);color:var(--mu);font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:20px">${qty===0?"Empty":qty<=5?"Low":"OK"}</span>`}</td>
+        <td>${canDo("deleteStock")?`<button class="btn-ic danger" onclick="deleteDrugBatch('${r.id}','${name}')" title="Remove batch"><i class="fa fa-trash"></i></button>`:"—"}</td>
       </tr>`;
     });
   });
@@ -1891,9 +1972,17 @@ window.loadBills=async()=>{
 window.loadAdminStats=async()=>{
   const td=today();const[ps,bs,ss]=await Promise.all([getDocs(collection(db,"patients")),getDocs(collection(db,"bills")),getDocs(collection(db,"staff"))]);
   const todP=ps.docs.filter(d=>{const c=d.data().createdAt;return c&&c.toDate&&c.toDate().toISOString().slice(0,10)===td;}).length;
+  sv("aTP",ps.size);sv("aTodP",todP);sv("aStaff",ss.docs.filter(d=>!d.data().deleted).length);
+  // Revenue — Admin only
+  const revSection=ge("adminRevenueSection");
+  if(!canDo("viewRevenue")){
+    if(revSection)revSection.innerHTML='<div style="background:#fce8e8;border-radius:var(--rs);padding:14px;text-align:center;color:var(--D);font-weight:600"><i class="fa fa-lock" style="margin-right:7px"></i>Access Denied – Admin Only</div>';
+    sv("aRev","—");sv("aCash","—");sv("aPOS","—");sv("aTrf","—");
+    return;
+  }
   const allB=bs.docs.map(d=>d.data());const todB=allB.filter(b=>b.date===td);
   const rev=todB.filter(b=>b.status==="Paid").reduce((a,b)=>a+b.total,0);
-  sv("aTP",ps.size);sv("aTodP",todP);sv("aRev","₦"+rev.toLocaleString());sv("aStaff",ss.size);
+  sv("aRev","₦"+rev.toLocaleString());
   sv("aCash","₦"+todB.filter(b=>b.method==="Cash"&&b.status==="Paid").reduce((a,b)=>a+b.total,0).toLocaleString());
   sv("aPOS","₦"+todB.filter(b=>b.method==="POS"&&b.status==="Paid").reduce((a,b)=>a+b.total,0).toLocaleString());
   sv("aTrf","₦"+todB.filter(b=>b.method==="Transfer"&&b.status==="Paid").reduce((a,b)=>a+b.total,0).toLocaleString());
@@ -1913,13 +2002,13 @@ window.loadStaff=async()=>{
   const el=ge("staffBody");if(!el)return;
   el.innerHTML='<tr><td colspan="5" class="cr"><i class="fa fa-spinner fa-spin"></i></td></tr>';
   const s=await getDocs(collection(db,"staff"));
-  if(s.empty){el.innerHTML='<tr><td colspan="5" class="cr">No staff</td></tr>';return;}
-  const canEdit=isSuperAdmin()||isAdmin();
-  el.innerHTML=s.docs.map(d=>{const r=d.data(),uid=d.id;
-    const salBadge=r.basicSalary?`<span class="salary-badge">₦${Number(r.basicSalary).toLocaleString()}</span>`:"<span style=\"color:var(--mu);font-size:.75rem\">Not set</span>";
+  const activeDocs=s.docs.filter(d=>!d.data().deleted);
+  if(!activeDocs.length){el.innerHTML='<tr><td colspan="5" class="cr">No staff</td></tr>';return;}
+  const canEdit=isAdmin();
+  el.innerHTML=activeDocs.map(d=>{const r=d.data(),uid=d.id;
     const shiftBadge=r.shift?`<span style="background:#e8f1fb;color:var(--P);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:capitalize">${r.shift}</span>`:"<span style=\"color:var(--mu);font-size:.72rem\">—</span>";
     const actions=canEdit?`<div style="display:flex;gap:5px"><button class="btn-ic" onclick="openEditStaff('${uid}')" title="Edit"><i class="fa fa-edit"></i></button><button class="btn-ic" onclick="openSalaryModal('${uid}')" title="Salary"><i class="fa fa-naira-sign"></i></button></div>`:"—";
-    return`<tr><td><b>${r.name}</b><br><small style="color:var(--mu);font-size:.72rem">${r.email}</small></td><td><span class="badge role-${(r.role||"").toLowerCase().replace(/\s/g,"-")}">${r.role}</span></td><td>${shiftBadge}</td><td><span class="badge ${r.active?"bg-ok":"bg-no"}">${r.active?"Active":"Inactive"}</span></td><td>${actions}</td></tr>`;
+    return`<tr><td><b>${r.name}</b><br><small style="color:var(--mu);font-size:.72rem">${r.email}</small></td><td><span class="badge role-${(r.role||"").toLowerCase().replace(/\s+/g,"-")}">${r.role}</span></td><td>${shiftBadge}</td><td><span class="badge ${r.active?"bg-ok":"bg-no"}">${r.active?"Active":"Inactive"}</span></td><td>${actions}</td></tr>`;
   }).join("");
 };
 
@@ -2270,13 +2359,12 @@ window.saveStaffEdit=async()=>{
   toast("Staff updated!","ok");cModal("editStaffModal");loadStaff();
 };
 window.deleteStaff=async()=>{
-  if(!isSuperAdmin()){toast("⛔ Super Admin only","err");return;}
+  if(!isAdmin()){toast("⛔ Admin access required","err");return;}
   const uid=gv("esUid");
   if(!uid){toast("No staff selected","err");return;}
-  if(!confirm("Delete this staff member? This cannot be undone.")){return;}
-  // We deactivate instead of hard-delete (Firebase Auth can't be deleted from client easily)
+  if(!confirm("Delete this staff member? They will be removed from the staff list.")){return;}
   await updateDoc(doc(db,"staff",uid),{active:false,deleted:true,deletedAt:new Date().toISOString(),deletedBy:SP.name});
-  toast("Staff removed from system","ok");cModal("editStaffModal");loadStaff();
+  toast("✅ Staff removed from system","ok");cModal("editStaffModal");loadStaff();
 };
 
 // ─── SALARY SETTINGS ───────────────────────────────────────────────────────
