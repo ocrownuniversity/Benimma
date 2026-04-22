@@ -2974,46 +2974,6 @@ window.selectDailyShift=(shiftKey)=>{
   }
 };
 
-function timeToMins(h,m){return h*60+m;}
-
-// Returns: {allowed:bool, status:"Present"|"Late"|"Early"|"OutOfShift", msg:string, shiftDef}
-function validateShiftClockIn(){
-  const shiftDef=getStaffShiftDef();
-  if(!shiftDef) return{allowed:true,status:"Present",msg:"",shiftDef:null};
-  const now=new Date();
-  const cur=timeToMins(now.getHours(),now.getMinutes());
-  const {start,end,label}=shiftDef;
-  // Check if time is within shift window (including buffers)
-  const windowStart=start-SHIFT_EARLY_BUFFER;
-  const windowEnd=end; // can't clock in after shift ends
-  let inWindow=false,isLate=false,isEarly=false;
-  // Handle overnight shift (e.g. Night: 18:00 – 08:00)
-  if(end<start){
-    // Crosses midnight
-    inWindow=(cur>=windowStart)||(cur<end);
-    isLate=(cur>=start+SHIFT_LATE_GRACE||cur>=start)&&(cur<start+SHIFT_LATE_GRACE+1)?false:cur>=start+SHIFT_LATE_GRACE;
-    isEarly=cur>=windowStart&&cur<start;
-  } else {
-    inWindow=cur>=windowStart&&cur<=windowEnd;
-    isEarly=cur>=windowStart&&cur<start;
-    isLate=cur>=start+SHIFT_LATE_GRACE&&cur<=windowEnd;
-  }
-  const shiftStartFmt=`${String(Math.floor(start/60)).padStart(2,"0")}:${String(start%60).padStart(2,"0")}`;
-  const shiftEndFmt=`${String(Math.floor(end/60)).padStart(2,"0")}:${String(end%60).padStart(2,"0")}`;
-  if(!inWindow){
-    return{allowed:false,status:"OutOfShift",shiftDef,
-      msg:`⛔ You cannot clock in now. Your ${label} shift runs ${shiftStartFmt}–${shiftEndFmt}. Clock-in is only allowed from ${String(Math.floor(windowStart/60)).padStart(2,"0")}:${String(windowStart%60).padStart(2,"0")}.`};
-  }
-  if(isEarly){
-    return{allowed:true,status:"Present",shiftDef,
-      msg:`⏰ You are clocking in ${start-cur} min early. Shift starts at ${shiftStartFmt}.`};
-  }
-  if(isLate){
-    return{allowed:true,status:"Late",shiftDef,
-      msg:`⚠️ You are clocking in late. ${label} shift started at ${shiftStartFmt}.`};
-  }
-  return{allowed:true,status:"Present",shiftDef,msg:""};
-}
 
 window.doClockIn=async()=>{
   // Must select shift first
