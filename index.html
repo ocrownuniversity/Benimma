@@ -1223,7 +1223,16 @@ onAuthStateChanged(auth,async user=>{
     try{
       const s=await getDoc(doc(db,"staff",user.uid));
       if(s.exists()){
-        SP={...s.data()};CU=user;
+        const data=s.data();
+        // Block deleted or deactivated staff immediately
+        if(data.deleted===true||data.active===false){
+          await signOut(auth);
+          ge("loginScreen").style.display="flex";
+          ge("appScreen").style.display="none";
+          toast("⛔ Your account has been deactivated. Contact the Administrator.","err");
+          return;
+        }
+        SP={...data};CU=user;
         // If email is in admin list, force role to Admin
         if(CU.email&&ADMIN_EMAILS.includes(CU.email.toLowerCase())){
           SP.role="Super Admin";
