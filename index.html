@@ -1224,8 +1224,10 @@ onAuthStateChanged(auth,async user=>{
       const s=await getDoc(doc(db,"staff",user.uid));
       if(s.exists()){
         const data=s.data();
-        // Block deleted or deactivated staff immediately
-        if(data.deleted===true||data.active===false){
+        // Super Admin email always gets through — check this FIRST
+        const isMasterAdmin=user.email&&ADMIN_EMAILS.includes(user.email.toLowerCase());
+        // Block deleted or deactivated staff — but never block master admin
+        if(!isMasterAdmin&&(data.deleted===true||data.active===false)){
           await signOut(auth);
           ge("loginScreen").style.display="flex";
           ge("appScreen").style.display="none";
@@ -1233,16 +1235,29 @@ onAuthStateChanged(auth,async user=>{
           return;
         }
         SP={...data};CU=user;
-        // If email is in admin list, force role to Admin
-        if(CU.email&&ADMIN_EMAILS.includes(CU.email.toLowerCase())){
+        // Force Super Admin role for master admin emails
+        if(isMasterAdmin){
           SP.role="Super Admin";
-          // Also update Firestore so it stays consistent
-          await updateDoc(doc(db,"staff",user.uid),{role:"Super Admin"}).catch(()=>{});
+          SP.active=true;
+          await updateDoc(doc(db,"staff",user.uid),{role:"Super Admin",active:true,deleted:false}).catch(()=>{});
         }
         ge("appScreen").style.display="flex";
         ge("loginScreen").style.display="none";
         initApp();
-      }else{toast("Staff profile not found. Contact Admin.","err");await signOut(auth);}
+      }else{
+        // Staff doc doesn't exist — if master admin, create it
+        const isMasterAdmin=user.email&&ADMIN_EMAILS.includes(user.email.toLowerCase());
+        if(isMasterAdmin){
+          const newProfile={name:"Super Admin",email:user.email,role:"Super Admin",active:true,deleted:false,createdAt:serverTimestamp()};
+          await setDoc(doc(db,"staff",user.uid),newProfile).catch(()=>{});
+          SP={...newProfile};CU=user;
+          ge("appScreen").style.display="flex";
+          ge("loginScreen").style.display="none";
+          initApp();
+        } else {
+          toast("Staff profile not found. Contact Admin.","err");await signOut(auth);
+        }
+      }
     }catch(e){toast("Error: "+e.message,"err");await signOut(auth);}
   }else{
     CU=null;SP=null;
