@@ -4317,26 +4317,26 @@ function buildPrintPayslip(p){
     <div>Daily Rate = ₦${Number(p.basic||0).toLocaleString()} ÷ ${p.daysInMonth||'?'} = <strong>₦${Math.round(p.dailyRate||0).toLocaleString()}/day</strong></div>
     <div style="margin-top:3px">Absent ${p.absentDays||0} day(s) × ₦${Math.round(p.dailyRate||0).toLocaleString()} = <strong style="color:#e53935">-₦${Math.round(p.absentDeduction||0).toLocaleString()}</strong></div>
     <div>Late ${p.lateDays||0} day(s) × 25% × ₦${Math.round(p.dailyRate||0).toLocaleString()} = <strong style="color:#e53935">-₦${Math.round(p.lateDeduction||0).toLocaleString()}</strong></div>
-    \${(p.noRecordDays||0)>0?`<div style="font-style:italic">\${p.noRecordDays} day(s) no clock-in → treated as Absent</div>`:''}
-    <div style="color:#1a7a4a">Off days: \${p.offDays||0} counted as Present ✔️</div>
+    ${(p.noRecordDays||0)>0?`<div style="font-style:italic">${p.noRecordDays} day(s) no clock-in → treated as Absent</div>`:''}
+    <div style="color:#1a7a4a">Off days: ${p.offDays||0} counted as Present ✔️</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:.72rem;text-align:center"><tr>
-    <td style="background:#e6f7ef;border-radius:4px;padding:5px"><div style="font-weight:700;color:#1a7a4a">PRESENT</div><div style="font-size:.9rem;font-weight:700">\${p.presentDays||0}</div></td>
+    <td style="background:#e6f7ef;border-radius:4px;padding:5px"><div style="font-weight:700;color:#1a7a4a">PRESENT</div><div style="font-size:.9rem;font-weight:700">${p.presentDays||0}</div></td>
     <td style="width:5px"></td>
-    <td style="background:#fff8e1;border-radius:4px;padding:5px"><div style="font-weight:700;color:#7a5e00">LATE</div><div style="font-size:.9rem;font-weight:700">\${p.lateDays||0}</div></td>
+    <td style="background:#fff8e1;border-radius:4px;padding:5px"><div style="font-weight:700;color:#7a5e00">LATE</div><div style="font-size:.9rem;font-weight:700">${p.lateDays||0}</div></td>
     <td style="width:5px"></td>
-    <td style="background:#fce8e8;border-radius:4px;padding:5px"><div style="font-weight:700;color:#e53935">ABSENT</div><div style="font-size:.9rem;font-weight:700">\${p.absentDays||0}</div></td>
+    <td style="background:#fce8e8;border-radius:4px;padding:5px"><div style="font-weight:700;color:#e53935">ABSENT</div><div style="font-size:.9rem;font-weight:700">${p.absentDays||0}</div></td>
     <td style="width:5px"></td>
-    <td style="background:#f0f4f8;border-radius:4px;padding:5px"><div style="font-weight:700;color:#6b7a99">OFF</div><div style="font-size:.9rem;font-weight:700">\${p.offDays||0}</div></td>
+    <td style="background:#f0f4f8;border-radius:4px;padding:5px"><div style="font-weight:700;color:#6b7a99">OFF</div><div style="font-size:.9rem;font-weight:700">${p.offDays||0}</div></td>
   </tr></table>
-  <div class="row"><span>Tax (PAYE) <em style="font-size:.68rem;color:#aaa">\${p.taxPercent||0}% of gross</em></span><span style="color:#e53935">₦\${Number(p.taxAmt||0).toLocaleString()}</span></div>
-  <div class="row"><span>Pension <em style="font-size:.68rem;color:#aaa">\${p.pensionPercent||0}% of gross</em></span><span style="color:#e53935">₦\${Number(p.pensionAmt||0).toLocaleString()}</span></div>
-  <div class="row"><span>NHF <em style="font-size:.68rem;color:#aaa">\${p.nhfPercent||0}% of gross</em></span><span style="color:#e53935">₦\${Number(p.nhfAmt||0).toLocaleString()}</span></div>
-  <div class="row"><span>Absence Deduction <em style="font-size:.68rem;color:#aaa">\${p.absentDays||0} day(s) × ₦\${Math.round(p.dailyRate||0).toLocaleString()}</em></span><span style="color:#e53935">₦\${Number(p.absentDeduction||0).toLocaleString()}</span></div>
-  <div class="row"><span>Late Deduction <em style="font-size:.68rem;color:#aaa">\${p.lateDays||0} day(s) × 25% daily rate</em></span><span style="color:#e53935">₦\${Number(p.lateDeduction||0).toLocaleString()}</span></div>
-  \${p.loanTotal?`<div class="row"><span>Loan/Advance Repayment</span><span style="color:#e53935">₦\${Number(p.loanTotal||0).toLocaleString()}</span></div>`:''}
-  \${p.extraDed?`<div class="row"><span>Extra Deduction</span><span style="color:#e53935">₦\${Number(p.extraDed||0).toLocaleString()}</span></div>`:''}
-  <div class="row bold"><span>Total Deductions</span><span style="color:#e53935">₦\${Number(p.totalDeductions||0).toLocaleString()}</span></div>
+  <div class="row"><span>Tax (PAYE) <em style="font-size:.68rem;color:#aaa">${p.taxPercent||0}% of gross</em></span><span style="color:#e53935">₦${Number(p.taxAmt||0).toLocaleString()}</span></div>
+  <div class="row"><span>Pension <em style="font-size:.68rem;color:#aaa">${p.pensionPercent||0}% of gross</em></span><span style="color:#e53935">₦${Number(p.pensionAmt||0).toLocaleString()}</span></div>
+  <div class="row"><span>NHF <em style="font-size:.68rem;color:#aaa">${p.nhfPercent||0}% of gross</em></span><span style="color:#e53935">₦${Number(p.nhfAmt||0).toLocaleString()}</span></div>
+  <div class="row"><span>Absence Deduction <em style="font-size:.68rem;color:#aaa">${p.absentDays||0} day(s) × ₦${Math.round(p.dailyRate||0).toLocaleString()}</em></span><span style="color:#e53935">₦${Number(p.absentDeduction||0).toLocaleString()}</span></div>
+  <div class="row"><span>Late Deduction <em style="font-size:.68rem;color:#aaa">${p.lateDays||0} day(s) × 25% daily rate</em></span><span style="color:#e53935">₦${Number(p.lateDeduction||0).toLocaleString()}</span></div>
+  ${p.loanTotal?`<div class="row"><span>Loan/Advance Repayment</span><span style="color:#e53935">₦${Number(p.loanTotal||0).toLocaleString()}</span></div>`:''}
+  ${p.extraDed?`<div class="row"><span>Extra Deduction</span><span style="color:#e53935">₦${Number(p.extraDed||0).toLocaleString()}</span></div>`:''}
+  <div class="row bold"><span>Total Deductions</span><span style="color:#e53935">₦${Number(p.totalDeductions||0).toLocaleString()}</span></div>
   <div class="net"><span>NET PAY</span><span>₦${Number(p.netPay||0).toLocaleString()}</span></div>
   <div class="footer">Generated by ${p.generatedBy||'System'} · ${p.generatedAt?p.generatedAt.slice(0,10):'—'} · Loving Heart Hospital Management System</div>
   </body></html>`;
