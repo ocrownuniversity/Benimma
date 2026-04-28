@@ -482,6 +482,16 @@ textarea.fi{resize:vertical;min-height:80px}
     <div id="mod-pharmacy" class="mod">
       <div class="mhdr"><h2><i class="fa fa-pills" style="color:var(--P)"></i> Pharmacy</h2><button class="bsm outline" onclick="loadRx()"><i class="fa fa-rotate"></i> Refresh</button></div>
       <div class="sc-mb"><h4 class="ssub">💊 Pending Prescriptions from Doctors</h4><div id="pharmRx"></div></div>
+
+      <!-- MANUAL DRUG ENTRY SECTION -->
+      <div class="sc-mb" style="border:2px solid #c2185b;border-radius:var(--r);padding:15px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h4 style="font-size:.93rem;color:#c2185b"><i class="fa fa-prescription-bottle-medical" style="margin-right:7px"></i>Manual Drug Dispensing</h4>
+          <button class="bsm" style="background:#fce4ec;color:#c2185b;border:1.5px solid #c2185b;font-size:.79rem" onclick="openManualDispenseModal()"><i class="fa fa-plus"></i> Dispense Manually</button>
+        </div>
+        <p style="font-size:.79rem;color:var(--mu);margin-bottom:8px">Dispense a drug directly to a patient without a doctor's prescription. Stock is automatically deducted and the action is recorded in the patient's medical history.</p>
+        <div id="manualDispenseHistory" style="margin-top:4px"><div class="en" style="font-size:.8rem">Recent manual dispensing entries appear here after use.</div></div>
+      </div>
       <div class="sc-mb">
         <h4 class="ssub">📦 Drug Stock Inventory</h4>
         <!-- Expiry alerts banner -->
@@ -931,6 +941,100 @@ textarea.fi{resize:vertical;min-height:80px}
     <div class="fg"><label class="fl">Medical History / Allergies</label><textarea id="rHist" class="fi" placeholder="Conditions, allergies…"></textarea></div>
     <button class="btnP" onclick="regPat()"><i class="fa fa-save"></i> Save Patient</button>
   </form>
+</div></div>
+
+<!-- MANUAL DRUG DISPENSE MODAL -->
+<div id="manualDispenseModal" class="movl"><div class="modal">
+  <div class="mhd">
+    <h3><i class="fa fa-prescription-bottle-medical" style="color:#c2185b"></i> Manual Drug Dispensing</h3>
+    <button class="mcls" onclick="cModal('manualDispenseModal')">✕</button>
+  </div>
+  <div style="background:#fce4ec;border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:.8rem;color:#c2185b;display:flex;gap:8px;align-items:flex-start">
+    <i class="fa fa-circle-info" style="margin-top:2px;flex-shrink:0"></i>
+    <span>This dispenses a drug <b>without a doctor's prescription</b>. Stock is deducted automatically and the action is saved to the patient's medical record.</span>
+  </div>
+  <div class="fg">
+    <label class="fl">Patient ID *</label>
+    <input id="mdPatId" class="fi" placeholder="e.g. MCH-0001" oninput="mdLookupPatient()"/>
+    <div id="mdPatInfo" style="margin-top:5px;font-size:.8rem;color:var(--mu)"></div>
+  </div>
+  <div class="fg">
+    <label class="fl">Select Drug from Stock *</label>
+    <select id="mdDrugSel" class="fsel" onchange="mdUpdateStockInfo()">
+      <option value="">Loading stock…</option>
+    </select>
+    <div id="mdStockInfo" style="margin-top:5px;font-size:.79rem;color:var(--mu)"></div>
+  </div>
+  <div class="frow">
+    <div class="fg">
+      <label class="fl">Quantity *</label>
+      <input id="mdQty" class="fi" type="number" min="1" value="1" placeholder="1" oninput="mdCheckQty()"/>
+    </div>
+    <div class="fg">
+      <label class="fl">Dosage / Frequency *</label>
+      <input id="mdDosage" class="fi" placeholder="e.g. 1 tablet twice daily"/>
+    </div>
+  </div>
+  <div class="fg">
+    <label class="fl">Reason / Clinical Indication</label>
+    <input id="mdReason" class="fi" placeholder="e.g. OTC request, emergency supply, patient request…"/>
+  </div>
+  <div id="mdQtyWarn" style="display:none;background:#fce8e8;border-radius:var(--rs);padding:8px 12px;font-size:.8rem;color:var(--D);margin-bottom:8px">
+    <i class="fa fa-triangle-exclamation"></i> <span id="mdQtyWarnText"></span>
+  </div>
+  <div style="background:var(--bg);border-radius:var(--rs);padding:9px 12px;font-size:.79rem;color:var(--mu);margin-bottom:12px">
+    <i class="fa fa-user" style="margin-right:5px"></i>Action will be recorded as performed by: <b id="mdStaffName">—</b>
+  </div>
+  <button class="btnP" style="background:#c2185b" onclick="submitManualDispense()">
+    <i class="fa fa-pills"></i> Dispense Drug & Save to Patient Record
+  </button>
+</div></div>
+
+<!-- MANUAL DRUG DISPENSE MODAL -->
+<div id="manualDispenseModal" class="movl"><div class="modal">
+  <div class="mhd">
+    <h3><i class="fa fa-prescription-bottle-medical" style="color:#c2185b"></i> Manual Drug Dispensing</h3>
+    <button class="mcls" onclick="cModal('manualDispenseModal')">✕</button>
+  </div>
+  <div style="background:#fce4ec;border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:.8rem;color:#c2185b;display:flex;gap:8px;align-items:flex-start">
+    <i class="fa fa-circle-info" style="margin-top:2px;flex-shrink:0"></i>
+    <span>Dispenses a drug <b>without a doctor's prescription</b>. Stock is deducted via FEFO and the action is saved to the patient's medical record automatically.</span>
+  </div>
+  <div class="fg">
+    <label class="fl">Patient ID *</label>
+    <input id="mdPatId" class="fi" placeholder="e.g. MCH-0001" oninput="mdLookupPatient()"/>
+    <div id="mdPatInfo" style="margin-top:5px;font-size:.8rem"></div>
+  </div>
+  <div class="fg">
+    <label class="fl">Select Drug from Stock *</label>
+    <select id="mdDrugSel" class="fsel" onchange="mdUpdateStockInfo()">
+      <option value="">Loading stock…</option>
+    </select>
+    <div id="mdStockInfo" style="margin-top:5px;font-size:.79rem"></div>
+  </div>
+  <div class="frow">
+    <div class="fg">
+      <label class="fl">Quantity *</label>
+      <input id="mdQty" class="fi" type="number" min="1" value="1" placeholder="1" oninput="mdCheckQty()"/>
+    </div>
+    <div class="fg">
+      <label class="fl">Dosage / Frequency *</label>
+      <input id="mdDosage" class="fi" placeholder="e.g. 1 tablet twice daily"/>
+    </div>
+  </div>
+  <div class="fg">
+    <label class="fl">Reason / Clinical Indication</label>
+    <input id="mdReason" class="fi" placeholder="e.g. OTC request, emergency supply, patient request…"/>
+  </div>
+  <div id="mdQtyWarn" style="display:none;border-radius:var(--rs);padding:8px 12px;font-size:.8rem;margin-bottom:8px">
+    <i class="fa fa-triangle-exclamation"></i> <span id="mdQtyWarnText"></span>
+  </div>
+  <div style="background:var(--bg);border-radius:var(--rs);padding:9px 12px;font-size:.79rem;color:var(--mu);margin-bottom:12px">
+    <i class="fa fa-user" style="margin-right:5px"></i>Recorded as performed by: <b id="mdStaffName">—</b>
+  </div>
+  <button class="btnP" style="background:#c2185b" onclick="submitManualDispense()">
+    <i class="fa fa-pills"></i> Dispense Drug &amp; Save to Patient Record
+  </button>
 </div></div>
 
 <!-- PATIENT FULL RECORD MODAL -->
@@ -1411,7 +1515,7 @@ window.showMod=mod=>{
   if(mod==="patients")    searchPats();
   if(mod==="appointments")loadAppts();
   if(mod==="lab")         loadLabQ();
-  if(mod==="pharmacy")    {loadRx();loadStock();}
+  if(mod==="pharmacy")    {loadRx();loadStock();loadManualDispenseHistory();}
   if(mod==="billing")     {loadBills();loadBillPriceList();}
   if(mod==="messages")    loadThreads();
   if(mod==="profile")     loadProf();
@@ -2034,6 +2138,190 @@ window.dispense=async(id,drug,pid,dosage)=>{
   else toast(`${drug} dispensed (Batch: ${batchUsed||"—"})!`,"ok");
   loadRx();loadStock();
 };
+
+// ─── MANUAL DRUG DISPENSING (Pharmacist-initiated, no doctor Rx) ──────────────
+let _mdStockCache=[];
+
+window.openManualDispenseModal=()=>{
+  if(!canDo("dispense")&&!isStrictAdmin()){toast("⛔ Only Pharmacists can manually dispense drugs","err");return;}
+  ge("mdPatId").value="";ge("mdPatInfo").textContent="";
+  ge("mdDosage").value="";ge("mdReason").value="";
+  ge("mdQty").value="1";ge("mdStockInfo").textContent="";
+  ge("mdQtyWarn").style.display="none";
+  ge("mdStaffName").textContent=SP.name||"—";
+  _mdLoadStockDropdown();
+  openModal("manualDispenseModal");
+};
+
+async function _mdLoadStockDropdown(){
+  const sel=ge("mdDrugSel");
+  sel.innerHTML='<option value="">⏳ Loading stock…</option>';
+  try{
+    const snap=await getDocs(query(collection(db,"drugBatches"),where("active","==",true)));
+    const byName={};
+    snap.docs.forEach(d=>{
+      const r=d.data();
+      if(!byName[r.name])byName[r.name]={name:r.name,totalQty:0};
+      byName[r.name].totalQty+=(r.qty||0);
+    });
+    _mdStockCache=Object.values(byName).filter(d=>d.totalQty>0).sort((a,b)=>a.name.localeCompare(b.name));
+    if(!_mdStockCache.length){sel.innerHTML='<option value="">⚠️ No stock available</option>';return;}
+    sel.innerHTML='<option value="">Select drug from stock…</option>'+
+      _mdStockCache.map(d=>`<option value="${d.name}">${d.name} (${d.totalQty} unit${d.totalQty!==1?"s":""})</option>`).join("");
+  }catch(e){sel.innerHTML='<option value="">⚠️ Error loading stock</option>';}
+}
+
+window.mdUpdateStockInfo=()=>{
+  const name=ge("mdDrugSel").value;
+  const infoEl=ge("mdStockInfo");
+  if(!name){infoEl.textContent="";return;}
+  const entry=_mdStockCache.find(d=>d.name===name);
+  if(entry)infoEl.innerHTML=`<span style="color:${entry.totalQty<=5?"var(--D)":"var(--A)"}"><i class="fa fa-boxes-stacked"></i> ${entry.totalQty} unit${entry.totalQty!==1?"s":""} in stock</span>`;
+  mdCheckQty();
+};
+
+window.mdCheckQty=()=>{
+  const name=ge("mdDrugSel").value;
+  const qty=parseInt(ge("mdQty").value)||0;
+  const warnEl=ge("mdQtyWarn");
+  const warnTxt=ge("mdQtyWarnText");
+  if(!name||qty<=0){warnEl.style.display="none";return;}
+  const entry=_mdStockCache.find(d=>d.name===name);
+  if(!entry){warnEl.style.display="none";return;}
+  if(qty>entry.totalQty){
+    warnEl.style.background="#fce8e8";warnEl.style.color="var(--D)";
+    warnTxt.textContent=`Requested (${qty}) exceeds available stock (${entry.totalQty} units).`;
+    warnEl.style.display="block";
+  } else if(entry.totalQty-qty<=5){
+    warnEl.style.background="#fff8e1";warnEl.style.color="#7a5e00";
+    warnTxt.textContent=`After dispensing, only ${entry.totalQty-qty} unit(s) will remain — low stock.`;
+    warnEl.style.display="block";
+  } else {
+    warnEl.style.display="none";
+  }
+};
+
+window.mdLookupPatient=async()=>{
+  const pid=(ge("mdPatId").value||"").trim();
+  const infoEl=ge("mdPatInfo");
+  if(!pid){infoEl.textContent="";return;}
+  try{
+    const snap=await getDocs(query(collection(db,"patients"),where("pid","==",pid)));
+    if(snap.empty){infoEl.innerHTML='<span style="color:var(--D)"><i class="fa fa-circle-xmark"></i> Patient not found</span>';}
+    else{const p=snap.docs[0].data();infoEl.innerHTML=`<span style="color:var(--A)"><i class="fa fa-circle-check"></i> <b>${p.name}</b> — ${p.age||"—"} yrs, ${p.gender||"—"}</span>`;}
+  }catch(e){infoEl.textContent="";}
+};
+
+window.submitManualDispense=async()=>{
+  if(!canDo("dispense")&&!isStrictAdmin()){toast("⛔ Only Pharmacists can manually dispense drugs","err");return;}
+  const pid=(ge("mdPatId").value||"").trim();
+  const drug=(ge("mdDrugSel").value||"").trim();
+  const qty=parseInt(ge("mdQty").value)||0;
+  const dosage=(ge("mdDosage").value||"").trim();
+  const reason=(ge("mdReason").value||"").trim();
+  if(!pid){toast("Enter a Patient ID","err");return;}
+  if(!drug){toast("Select a drug from stock","err");return;}
+  if(qty<1){toast("Quantity must be at least 1","err");return;}
+  if(!dosage){toast("Enter dosage / frequency","err");return;}
+
+  const patSnap=await getDocs(query(collection(db,"patients"),where("pid","==",pid)));
+  if(patSnap.empty){toast("Patient ID not found in system","err");return;}
+
+  const stockEntry=_mdStockCache.find(d=>d.name===drug);
+  if(!stockEntry||stockEntry.totalQty<qty){toast(`Not enough stock. Available: ${stockEntry?stockEntry.totalQty:0}`,"err");return;}
+
+  const btn=document.querySelector("#manualDispenseModal .btnP");
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Dispensing…';}
+
+  try{
+    // FEFO batch deduction — same logic as existing dispense()
+    const batchSnap=await getDocs(query(collection(db,"drugBatches"),where("active","==",true)));
+    const today_=new Date();today_.setHours(0,0,0,0);
+    let matchedBatches=batchSnap.docs.filter(d=>{
+      const n=(d.data().name||"").toLowerCase(),dn=drug.toLowerCase();
+      return(n===dn||n.includes(dn)||dn.includes(n))&&(d.data().qty||0)>0;
+    });
+    matchedBatches.sort((a,b)=>{
+      const ae=a.data().expiry,be=b.data().expiry;
+      if(!ae&&!be)return 0;if(!ae)return 1;if(!be)return -1;
+      return new Date(ae)-new Date(be);
+    });
+    let remaining=qty,batchesUsed=[],lowStockWarn=false,expiredWarn=false;
+    for(const batch of matchedBatches){
+      if(remaining<=0)break;
+      const bd=batch.data();
+      const take=Math.min(remaining,bd.qty||0);
+      const newQty=(bd.qty||0)-take;
+      batchesUsed.push(`${bd.batchNo||"—"} (×${take})`);
+      if(bd.expiry&&new Date(bd.expiry)<today_){
+        expiredWarn=true;
+        await sendNotif(["Admin","Pharmacist"],"rx",`🚨 Expired Batch Dispensed: ${drug}`,`Batch ${bd.batchNo||"—"} of ${drug} is EXPIRED (${bd.expiry}). Manually dispensed for patient ${pid} by ${SP.name}.`,"");
+      }
+      await updateDoc(doc(db,"drugBatches",batch.id),{qty:newQty,lastDispensedAt:serverTimestamp(),lastDispensedBy:SP.name});
+      const legSnap=await getDocs(query(collection(db,"drugStock"),where("name","==",bd.name)));
+      if(!legSnap.empty){
+        const legQty=legSnap.docs[0].data().qty||0;
+        const legNew=Math.max(0,legQty-take);
+        await updateDoc(doc(db,"drugStock",legSnap.docs[0].id),{qty:legNew,updatedAt:serverTimestamp()});
+        if(legNew<=5){lowStockWarn=true;await sendNotif(["Admin","Pharmacist"],"rx",`⚠️ Low Stock: ${drug}`,`Only ${legNew} unit(s) of ${drug} remaining after manual dispense.`,"");}
+        if(legNew===0)await sendNotif(["Admin","Pharmacist"],"rx",`🚨 OUT OF STOCK: ${drug}`,`${drug} is now completely out of stock!`,"");
+      }
+      remaining-=take;
+    }
+    const batchNote=batchesUsed.length?`\nBatch(es): ${batchesUsed.join(", ")}`:`\n⚠️ No batch record found`;
+
+    // Notify Doctor / Nurse / Admin
+    await sendNotif(["Doctor","Nurse","Admin"],"rx","💊 Manual Drug Dispensed",
+      `${drug} (×${qty}) manually dispensed for patient ${pid} by ${SP.name} (Pharmacist).${reason?" Reason: "+reason:""}`,pid);
+
+    // Add to patient record — same format as existing Rx dispense
+    await addDoc(collection(db,"records"),{
+      pid,type:"rx",tag:"Pharmacist Manual Dispense",role:"pharmacy",
+      body:`💊 ${drug} — Manually Dispensed by ${SP.name}\nQuantity: ${qty} unit(s)\nDosage: ${dosage}`+
+           (reason?`\nReason: ${reason}`:"")+batchNote+
+           `\nFEFO stock deduction applied\n[No doctor prescription — pharmacist-initiated entry]`,
+      by:SP.name,byRole:SP.role,ts:serverTimestamp()
+    });
+
+    // Create a prescription-like record for history consistency
+    await addDoc(collection(db,"prescriptions"),{
+      patientId:pid,drug,dosage,
+      instructions:reason||"Manual pharmacist entry",
+      prescribedBy:`${SP.name} (Pharmacist — Manual Entry)`,
+      dispensed:true,dispensedBy:SP.name,dispensedAt:serverTimestamp(),
+      status:"Dispensed",manualEntry:true,createdAt:serverTimestamp()
+    });
+
+    cModal("manualDispenseModal");
+    if(expiredWarn)toast(`⚠️ Dispensed from EXPIRED batch! Admin notified.`,"err");
+    else if(lowStockWarn)toast(`⚠️ Low stock alert for ${drug}!`,"err");
+    else toast(`✅ ${drug} (×${qty}) dispensed & saved to patient record!`,"ok");
+    loadRx();loadStock();loadManualDispenseHistory();
+  }catch(e){
+    toast("Error: "+e.message,"err");
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fa fa-pills"></i> Dispense Drug & Save to Patient Record';}
+  }
+};
+
+window.loadManualDispenseHistory=async()=>{
+  const el=ge("manualDispenseHistory");if(!el)return;
+  try{
+    const snap=await getDocs(query(collection(db,"prescriptions"),where("manualEntry","==",true),orderBy("createdAt","desc")));
+    if(snap.empty){el.innerHTML='<div class="en" style="font-size:.8rem">No manual dispensing records yet.</div>';return;}
+    const rows=snap.docs.slice(0,8).map(d=>({id:d.id,...d.data()}));
+    el.innerHTML=`<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#c2185b;margin-bottom:6px">Recent Manual Entries</div>`+
+    `<table class="dtab" style="font-size:.78rem"><thead><tr><th>Patient</th><th>Drug</th><th>Dosage</th><th>By</th><th>Date</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr>
+      <td><span class="pid">${r.patientId||"—"}</span></td>
+      <td><b>${r.drug||"—"}</b></td>
+      <td style="color:var(--mu)">${r.dosage||"—"}</td>
+      <td style="font-size:.73rem">${r.dispensedBy||"—"}</td>
+      <td style="font-size:.73rem">${r.createdAt?new Date(r.createdAt.toDate()).toLocaleDateString("en-GB",{day:"2-digit",month:"short"}):"—"}</td>
+    </tr>`).join("")+`</tbody></table>`;
+  }catch(e){el.innerHTML='<div class="en" style="font-size:.8rem">Could not load history.</div>';}
+};
+
 window.deleteDrugBatch=async(batchId,drugName)=>{
   if(!canDo("deleteDrug")&&!isStrictAdmin()){toast("⛔ Only Pharmacists and Admins can delete drug stock","err");return;}
   if(!confirm(`Delete batch of "${drugName}" from stock?\n\nThis cannot be undone.`))return;
